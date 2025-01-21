@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Matter State Transition</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f0f8ff;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+    }
+    #stateDisplay {
+      margin: 20px 0;
+      padding: 10px;
+      font-size: 1.5em;
+      background-color: #e6e6fa;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      display: inline-block;
+    }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 1em;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    button:hover:not(:disabled) {
+      background: linear-gradient(90deg, #1e90ff, #00bfff);
+      transform: scale(1.1);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+    button:disabled:hover {
+      transform: none;
+      box-shadow: none;
+    }
+    p {
+      margin-top: 20px;
+      color: #555;
+      font-size: 0.9em;
+      background-color: #f9f9f9;
+      padding: 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Matter State Transition</h1>
+  <div id="stateDisplay">Current State: <strong>None</strong></div>
+  <button id="createMatterButton" onclick="createMatter()">Create Matter</button>
+  <button id="deleteMatterButton" style="display: none;" onclick="deleteMatter()">Delete Matter</button>
+  <button onclick="changeState('liquid')" style="display: none;">Convert to Liquid</button>
+  <button onclick="changeState('gas')" style="display: none;">Convert to Gas</button>
+  <button onclick="changeState('solid')" style="display: none;">Convert to Solid</button>
+  <button id="deleteButton" onclick="deleteState()" style="display: none;">Delete State</button>
+  <button id="modifyButton" onclick="modifyState()" style="display: none;">Modify State</button>
+
+  <p>
+    <strong>How to access local storage in the browser:</strong><br>
+    1. Right-click anywhere on the page and select "Inspect" (or press <code>Ctrl+Shift+I</code> or <code>Cmd+Option+I</code> on Mac).<br>
+    2. Go to the "Application" tab in the Developer Tools.<br>
+    3. Under "Storage," select "Local Storage" and then choose this page's URL.<br>
+    4. You will see the key-value pairs stored in local storage, including the matter state.
+  </p>
+
+  <script>
+    // Initial state of the matter
+    let currentState = localStorage.getItem("matterState") || "none";
+
+    // Update UI based on current state
+    function updateUI() {
+      const stateDisplay = document.getElementById("stateDisplay");
+      const createMatterButton = document.getElementById("createMatterButton");
+      const deleteMatterButton = document.getElementById("deleteMatterButton");
+      const actionButtons = document.querySelectorAll("button:not(#createMatterButton, #deleteMatterButton)");
+      
+      // Update the display
+      stateDisplay.innerHTML = `Current State: <strong>${currentState}</strong>`;
+      
+      if (currentState === "none") {
+        // Show "Create Matter" button
+        createMatterButton.style.display = "inline-block";
+        deleteMatterButton.style.display = "none";
+        actionButtons.forEach(button => button.style.display = "none");
+      } else {
+        // Show "Delete Matter" and other action buttons
+        createMatterButton.style.display = "none";
+        deleteMatterButton.style.display = "inline-block";
+        actionButtons.forEach(button => button.style.display = "inline-block");
+      }
+      
+      // Disable buttons if state is "solid"
+      const isSolid = currentState === "solid";
+      document.getElementById("deleteButton").disabled = isSolid;
+      document.getElementById("modifyButton").disabled = isSolid;
+    }
+
+    // Create matter
+    function createMatter() {
+      currentState = "gas"; // Default state when creating matter
+      localStorage.setItem("matterState", currentState);
+      updateUI();
+    }
+
+    // Delete matter
+    function deleteMatter() {
+      currentState = "none";
+      localStorage.removeItem("matterState");
+      updateUI();
+    }
+
+    // Change the state of matter
+    function changeState(newState) {
+      if (currentState === "solid") {
+        alert("State is already solid (final state). It cannot be modified or deleted.");
+        return;
+      }
+
+      // Valid transitions
+      if (
+        (currentState === "gas" && newState === "liquid") ||
+        (currentState === "liquid" && newState === "gas") ||
+        newState === "solid"
+      ) {
+        currentState = newState;
+        localStorage.setItem("matterState", currentState);
+
+        // If the state becomes solid, save to file
+        if (currentState === "solid") {
+          saveToFile("Final state is solid. No further changes are allowed.");
+        }
+        updateUI();
+      } else {
+        alert(`Invalid transition from ${currentState} to ${newState}.`);
+      }
+    }
+
+    // Delete the current state (for "deleteState" button)
+    function deleteState() {
+      if (currentState === "solid") {
+        alert("State is already solid (final state). It cannot be deleted.");
+        return;
+      }
+      currentState = "none";
+      localStorage.setItem("matterState", currentState);
+      updateUI();
+    }
+
+    // Modify the current state
+    function modifyState() {
+      if (currentState === "solid") {
+        alert("State is already solid (final state). It cannot be modified.");
+        return;
+      }
+      const newState = prompt("Enter the new state (gas, liquid, or solid):");
+      if (newState === "gas" || newState === "liquid" || newState === "solid") {
+        changeState(newState);
+      } else {
+        alert("Invalid state entered.");
+      }
+    }
+
+    // Save the final state to a text file
+    function saveToFile(content) {
+      const blob = new Blob([content], { type: "text/plain" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "final_state.txt";
+      a.click();
+    }
+
+    // Initialize the UI
+    updateUI();
+  </script>
+</body>
+</html>
